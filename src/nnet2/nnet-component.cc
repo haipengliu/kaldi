@@ -2500,7 +2500,7 @@ std::string SpliceComponent::Info() const {
 
   return stream.str();
 }
-
+  // const_component = ivector
 void SpliceComponent::Init(int32 input_dim, std::vector<int32> context,
                            int32 const_component_dim) {
   input_dim_ = input_dim;
@@ -2538,7 +2538,7 @@ void SpliceComponent::InitFromString(std::string args) {
   }
   Init(input_dim, context, const_component_dim);
 }
-
+  // every frame(remove ivector first) is spliced by context_ and add additional ivector
 int32 SpliceComponent::OutputDim() const {
   return (input_dim_  - const_component_dim_)
       * (context_.size())
@@ -2873,9 +2873,8 @@ void SpliceMaxComponent::InitFromString(std::string args) {
 }
 
 /* in_info and out_info has been defined. */
-/* you need to create the 'in' which is CuMatrix according to in_info and out_info. */
-/* Then you create 'out' as a CuMatrix according to 'in'. */
-
+// you need to copy from 'in' to 'out'
+// generally & means input, * means output
 void SpliceMaxComponent::Propagate(const ChunkInfo &in_info,
                                    const ChunkInfo &out_info,
                                    const CuMatrixBase<BaseFloat> &in,
@@ -2889,29 +2888,44 @@ void SpliceMaxComponent::Propagate(const ChunkInfo &in_info,
         out_chunk_size = out_info.ChunkSize(),
         dim = in_info.NumCols();
 
-  /* generally, out_chunk_size < in_chunk_size, so output_chunk is a part of input_chunk */
+  // generally, out_chunk_size < in_chunk_size, so output_chunk is a part of input_chunk
+  //for each chunk,  we first copy from input_chunk to input_chunk_part, then from input_chunk_part to output_chunk
   CuMatrix<BaseFloat> input_chunk_part(out_chunk_size, dim);
   for (int32 chunk = 0; chunk < in_info.NumChunks(); chunk++) {
 
-    /* we process the CuMatrix chunk by chunk, both for in and out */
+    // we process the CuMatrix chunk by chunk, from input_chunk to output_chunk
     CuSubMatrix<BaseFloat> input_chunk(in,
                                      chunk * in_chunk_size, in_chunk_size,
                                      0, dim),
                         output_chunk(*out,
                                      chunk * out_chunk_size,
                                      out_chunk_size, 0, dim);
+    /* e.g
+       context_ = [-2, -1, 0, 1, 2]
+       offset = 0, 1, 2, 3, 4
+       context_[offset] = -2, -1, 0, 1, 2
+     */
     for (int32 offset = 0; offset < context_.size(); offset++) {
       // computing the indices to copy into input_chunk_part from input_chunk
       // copy the rows of the input matrix which correspond to the current
       // context index
       std::vector<int32> input_chunk_inds(out_chunk_size);
       for (int32 i = 0; i < out_chunk_size; i++) {
+        // out_chunk is selected from in_chunk
+        // out_chunk_size = 5
+        // ChunkInfo.offset = [-10, -5, 0, 5, 10]
+        // out_chunk_ind = 0, 1, 2, 3, 4, 5
+        // out_chunk_offset = -10, -5, 0, 5, 10
         int32 out_chunk_ind  = i;
+        // here out_chunk_ind may exceeds the size of out_info.offsets
+        // unless out_info.offsets is empty.
         int32 out_chunk_offset =
             out_info.GetOffset(out_chunk_ind);
+
+        // index is from 0
         input_chunk_inds[i] =
             in_info.GetIndex(out_chunk_offset + context_[offset]);
-      }
+      } // end for out_chunk_ind
       CuArray<int32> cu_chunk_inds(input_chunk_inds);
       input_chunk_part.CopyRows(input_chunk, cu_chunk_inds);
       if (offset == 0)  {
@@ -2919,7 +2933,7 @@ void SpliceMaxComponent::Propagate(const ChunkInfo &in_info,
       } else {
         output_chunk.Max(input_chunk_part);
       }
-    }
+    } // end for offset
   }
 }
 
