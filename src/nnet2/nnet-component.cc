@@ -2872,6 +2872,9 @@ void SpliceMaxComponent::InitFromString(std::string args) {
   Init(dim, context);
 }
 
+/* in_info and out_info has been defined. */
+/* you need to create the 'in' which is CuMatrix according to in_info and out_info. */
+/* Then you create 'out' as a CuMatrix according to 'in'. */
 
 void SpliceMaxComponent::Propagate(const ChunkInfo &in_info,
                                    const ChunkInfo &out_info,
@@ -2886,8 +2889,11 @@ void SpliceMaxComponent::Propagate(const ChunkInfo &in_info,
         out_chunk_size = out_info.ChunkSize(),
         dim = in_info.NumCols();
 
+  /* generally, out_chunk_size < in_chunk_size, so output_chunk is a part of input_chunk */
   CuMatrix<BaseFloat> input_chunk_part(out_chunk_size, dim);
   for (int32 chunk = 0; chunk < in_info.NumChunks(); chunk++) {
+
+    /* we process the CuMatrix chunk by chunk, both for in and out */
     CuSubMatrix<BaseFloat> input_chunk(in,
                                      chunk * in_chunk_size, in_chunk_size,
                                      0, dim),
