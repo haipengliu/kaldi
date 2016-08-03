@@ -840,6 +840,17 @@ class FixedAffineComponent;
 // Note: although this class can be instantiated, it also
 // functions as a base-class for more specialized versions of
 // AffineComponent.
+
+/*
+    |-w0-|-w1-|-w2-|---------|-bias_parms-|
+    |------------------------|---- b1 ----|
+    |
+  linearParms
+    |
+    |
+    |
+
+*/
 class AffineComponent: public UpdatableComponent {
   friend class SoftmaxComponent; // Friend declaration relates to mixing up.
  public:

@@ -1367,8 +1367,6 @@ Component *AffineComponent::CollapseWithNext(
   return ans;
 }
 
-
-
 Component *AffineComponent::CollapseWithPrevious(
     const FixedAffineComponent &prev_component) const {
   // If at least one was non-updatable, make the whole non-updatable.
