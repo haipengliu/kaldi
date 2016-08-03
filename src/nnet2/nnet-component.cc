@@ -2602,8 +2602,19 @@ void ChunkInfo::ToString() const  {
 }
 */
 
+                 /***************************************************************/
+                 /*  |     |      |-- dim --|-- ctx0 --|-- ctx1 -- |-- ivec --| */
+                 /*  |    chunk   |         |          |           |          | */
+                 /*  |     |      |         |          |           |          | */
+                 /*  |--------------------------------------------------------- */
+                 /* Rows                                                        */
+                 /*  |                                                          */
+                 /*  |                                                          */
+                 /*  |                                                          */
+                 /***************************************************************/
 
-void SpliceComponent::Propagate(const ChunkInfo &in_info,
+
+Void SpliceComponent::Propagate(const ChunkInfo &in_info,
                                 const ChunkInfo &out_info,
                                 const CuMatrixBase<BaseFloat> &in,
                                 CuMatrixBase<BaseFloat> *out) const  {
@@ -2625,10 +2636,11 @@ void SpliceComponent::Propagate(const ChunkInfo &in_info,
 
   // 'indexes' is, for each index from 0 to context_.size() - 1,
   // then for each row of "out", the corresponding row of "in" that we copy from
-  int32 num_splice = context_.size();
+  int32 num_splice = context_.size(); 
   std::vector<std::vector<int32> > indexes(num_splice);
   for (int32 c = 0; c < num_splice; c++)
-    indexes[c].resize(out->NumRows());
+    // although resize each context by NumRows, we fill rows chunk by chunk
+    indexes[c].resize(out->NumRows()); 
   // const_component_dim_ != 0, "const_indexes" will be used to determine which
   // row of "in" we copy the last part of each row of "out" from (this part is
   // not subject to splicing, it's assumed constant for each frame of "input".
@@ -2641,6 +2653,7 @@ void SpliceComponent::Propagate(const ChunkInfo &in_info,
       // but is restricted to chunk 0 for efficiency reasons
       for (int32 c = 0; c < num_splice; c++) {
         for (int32 out_index = 0; out_index < out_chunk_size; out_index++) {
+          // think of contiguous, offset == index
           int32 out_offset = out_info.GetOffset(out_index);
           int32 in_index = in_info.GetIndex(out_offset + context_[c]);
           indexes[c][chunk * out_chunk_size + out_index] =
@@ -2669,7 +2682,7 @@ void SpliceComponent::Propagate(const ChunkInfo &in_info,
 
   for (int32 c = 0; c < num_splice; c++) {
     int32 dim = input_dim - const_dim;  // dimension we
-    // are splicing
+    // are splicing, const_dim = ivector
     CuSubMatrix<BaseFloat> in_part(in, 0, in.NumRows(),
                                    0, dim),
         out_part(*out, 0, out->NumRows(),
