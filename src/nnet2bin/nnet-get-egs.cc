@@ -46,6 +46,7 @@ static void ProcessFile(const MatrixBase<BaseFloat> &feats,
   int32 basic_feat_dim = feat_dim - const_feat_dim;
 
   for (int32 t = 0; t < feats.NumRows(); t += num_frames) {
+    // num_frames=1
     int32 this_num_frames = std::min(num_frames,
                                      feats.NumRows() - t);
 
@@ -163,6 +164,7 @@ int main(int argc, char *argv[]) {
           num_err++;
           continue;
         }
+        // key is the utt_id
         ProcessFile(feats, pdf_post, key,
                     left_context, right_context, num_frames,
                     const_feat_dim, &num_frames_written, &num_egs_written,
